@@ -11,10 +11,20 @@ import random
 from PyQt4 import QtCore, QtGui
 from PyQt4.QtCore import pyqtSignal, pyqtSlot
 
-
-class DesignerMainWindow(QtGui.QWidget):
+class DesignerMainWindow(QtGui.QMainWindow):
     def __init__(self):
         super(DesignerMainWindow, self).__init__()
+        
+        central = MainWindow()
+        
+        self.setCentralWidget(central)
+        
+        
+
+
+class MainWindow(QtGui.QWidget):
+    def __init__(self, parent=None):
+        super(MainWindow, self).__init__(parent)
         self.ui()
         self.startThreads()
 
@@ -47,6 +57,7 @@ class DesignerMainWindow(QtGui.QWidget):
 
         self.connect(self.worker1, QtCore.SIGNAL('error(QString)'), self, QtCore.SLOT('error(QString)'))
         self.connect(self.thread1, QtCore.SIGNAL('started()'), self.worker1, QtCore.SLOT('process()'))
+        self.connect(self.worker1, QtCore.SIGNAL('resultReady()'),self, QtCore.SLOT('getResult()')) 
         self.connect(self.worker1, QtCore.SIGNAL('finished()'), self.thread1, QtCore.SLOT('quit()'))
         self.connect(self.worker1, QtCore.SIGNAL('finished()'), self.worker1, QtCore.SLOT('deleteLater()'))
         self.connect(self.thread1, QtCore.SIGNAL('finished()'), self.thread1, QtCore.SLOT('deleteLater()'))
@@ -62,6 +73,11 @@ class DesignerMainWindow(QtGui.QWidget):
 
         print(self.thread1.isRunning())
         print(self.thread2.isRunning())
+        
+    @pyqtSlot()
+    def getResult(self):
+        result = self.worker1.result
+        self.edit.setText(str(result[4]))
 
     @pyqtSlot(str)
     def error(self,e):
@@ -73,21 +89,27 @@ class DesignerMainWindow(QtGui.QWidget):
 class Worker(QtCore.QObject):
 
     finished=pyqtSignal()
+    resultReady=pyqtSignal()
     error=pyqtSignal(['QString'])
 
-    def __init__(self, name, edit,parent=None):
+    def __init__(self, name, edit, parent=None):
         super(Worker,self).__init__()
         self.name = name
         self.edit = edit
+        self.result = []
 
     @pyqtSlot()
     def process(self):
         for _ in range(5):
-            self.edit.setText(self.name)
-            print(self.name)
-            time.sleep(random.uniform(0,0.1))
+            #self.edit.setText(self.name)
+            self.result.append((_*2))
+        self.resultReady.emit()
     
+    @pyqtSlot()
+    def getResult(self):
         self.finished.emit()
+        #return self.result
+        
 
 def main():
     app=QtGui.QApplication(sys.argv)
