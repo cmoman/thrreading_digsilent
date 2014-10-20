@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #coding:utf-8
 # Author:   --<>
-# Purpose:
+# Purpose: To run DigSilent within a thread
 # Created: 30/09/14
 
 import sys
@@ -191,7 +191,7 @@ class Worker(QtCore.QObject):
 def main():
     app=QtGui.QApplication(sys.argv)
     Digapp = pf.GetApplication('counties')
-    dmw = DesignerMainWindow(Digapp) # instantiate a window
+    dmw = DesignerMainWindow(Digapp) # instantiate a window and pass the Digapp to the mainwindow
     dmw.show()
     sys.exit(app.exec_())
 
