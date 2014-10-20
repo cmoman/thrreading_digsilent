@@ -148,7 +148,7 @@ class Worker(QtCore.QObject):
             x=0
         while x< 100000:
             x+=1
-            #print x
+            print (x)
             
         self.resultReady.emit()
 
