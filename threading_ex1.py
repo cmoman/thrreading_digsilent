@@ -8,14 +8,16 @@ import sys
 import time
 import random
 
+import powerfactory as pf
+
 from PyQt4 import QtCore, QtGui
 from PyQt4.QtCore import pyqtSignal, pyqtSlot
 
 class DesignerMainWindow(QtGui.QMainWindow):
-    def __init__(self):
+    def __init__(self, Digapp):
         super(DesignerMainWindow, self).__init__()
         
-        self.central = MainWindow()
+        self.central = MainWindow(Digapp)
         
         self.setWindowTitle('multithreading')
         
@@ -34,10 +36,11 @@ class MainWindow(QtGui.QWidget):
     killthread=pyqtSignal()
     
     
-    def __init__(self, parent=None):
+    def __init__(self, Digapp, parent=None):
         super(MainWindow, self).__init__(parent)
         self.ui()
         #self.startThreads()
+        self.Digapp = Digapp
 
 
     def ui(self):
@@ -69,8 +72,8 @@ class MainWindow(QtGui.QWidget):
     @pyqtSlot()
     def startThreads(self):
 
-        self.worker1 = Worker('In Thread1',self.edit)
-        self.worker2 = Worker('In Thread2',self.edit2)
+        self.worker1 = Worker('In Thread1',self.edit, self.Digapp)
+        self.worker2 = Worker('In Thread2',self.edit2, self.Digapp)
 
         self.thread1 = QtCore.QThread()
         self.thread2 = QtCore.QThread()
@@ -128,11 +131,20 @@ class Worker(QtCore.QObject):
     resultReady=pyqtSignal()
     error=pyqtSignal(['QString'])
 
-    def __init__(self, name, edit, parent=None):
+    def __init__(self, name, edit, app, parent=None):
         super(Worker,self).__init__()
         self.name = name
         self.edit = edit
         self.result = []
+        self.app = app
+
+
+        prja = self.app.ActivateProject('test')
+        prj = self.app.GetActiveProject()
+        if prj is None:
+            raise Exception("No project activated. Python Script stopped.")
+
+        self.ldf = self.app.GetFromStudyCase("ComLdf")
         
     #@pyqtSlot()
     def getResult(self):
@@ -141,14 +153,32 @@ class Worker(QtCore.QObject):
 
     @pyqtSlot()
     def process(self):
-        for _ in range(5):
-            #self.edit.setText(self.name)
-            
-            self.result.append((_*2))
-            x=0
-        while x< 100000:
-            x+=1
-            print (x)
+
+
+        try:
+            self.ldf.iopt_net = 0
+
+            #execute load flow
+            self.ldf.Execute()
+
+            print("Collecting all calculation relevant terminals..")
+            terminals = self.app.GetCalcRelevantObjects("*.ElmTerm")
+            if not terminals:
+                raise Exception("No calculation relevant terminals found")
+            print("Number of terminals found: %d" % len(terminals))
+
+            for terminal in terminals:
+                voltage = terminal.__getattr__("m.u")
+                self.result.append(voltage)
+                print("Voltage at terminal %s is %f p.u." % (terminal.cDisplayName , voltage))
+                #print("Voltage at terminal %s is %f p.u." % (terminal , voltage))
+            #print to PowerFactory output window
+            print("Python Script ended.")
+
+        except ValueError as err:
+            print(err)
+
+
             
         self.resultReady.emit()
 
@@ -160,7 +190,8 @@ class Worker(QtCore.QObject):
 
 def main():
     app=QtGui.QApplication(sys.argv)
-    dmw = DesignerMainWindow() # instantiate a window
+    Digapp = pf.GetApplication('counties')
+    dmw = DesignerMainWindow(Digapp) # instantiate a window
     dmw.show()
     sys.exit(app.exec_())
 
