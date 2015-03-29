@@ -8,6 +8,8 @@ import sys
 import time
 import random
 
+#bling testing git in
+
 import powerfactory as pf
 
 from PyQt4 import QtCore, QtGui
@@ -66,6 +68,8 @@ class MainWindow(QtGui.QWidget):
         self.connect(self.dial2, QtCore.SIGNAL('valueChanged(int)'), self.slider, QtCore.SLOT('setValue(int)'))
         
         self.connect(self.pushbutton, QtCore.SIGNAL('clicked()'), self, QtCore.SLOT('startThreads()'))
+
+
         
         
 
@@ -104,10 +108,17 @@ class MainWindow(QtGui.QWidget):
         self.connect(self.thread2, QtCore.SIGNAL('finished()'), self.thread2, QtCore.SLOT('deleteLater()'))
 
         self.thread1.start()
+
+
         #self.thread2.start()
 
         print('Thread One is running = '+str(self.thread1.isRunning()))
         print('Thread Two is running = ' +str(self.thread2.isRunning()))
+
+        ab=QtGui.QMessageBox()
+        ab.setText("The thread was started")
+        ab.exec_()
+
         
     @pyqtSlot()
     def getResult(self):
