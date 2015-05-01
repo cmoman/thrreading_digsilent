@@ -10,6 +10,8 @@ import random
 
 #bling testing git in
 
+sys.path.append('C:\Program Files\DIgSILENT\PowerFactory 15.1\python')
+
 import powerfactory as pf
 
 from PyQt4 import QtCore, QtGui
@@ -215,18 +217,18 @@ class Worker(QtCore.QObject):
 
             print("Collecting all calculation relevant lines..")
             lines = self.app.GetCalcRelevantObjects("*.ElmLne")
-            print(lines)
+            #print(lines
 
-            line = lines[0]
-            print(line.c.Ikss)
+            #line = lines[0]
+            #print(line.c.Ikss)
 
             for line in lines:
-                print(dir(line))
+                #print(dir(line))
                 amps = line.__getattr__("m:Ikss:bus1:A")
-                Z0 = line.__getattr__("Z0:bus1")
+                Z0 = line.__getattr__("m:Z0:bus1")
                 #amps = line.__getattr__()
 
-                print (amps)
+                #print (amps)
 
                 #amps = 1.0
                 #self.result.append(voltage)
