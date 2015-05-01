@@ -156,6 +156,9 @@ class Worker(QtCore.QObject):
             raise Exception("No project activated. Python Script stopped.")
 
         self.ldf = self.app.GetFromStudyCase("ComLdf")
+        self.shc = self.app.GetFromStudyCase("ComShc")
+
+        print('123')
         
     #@pyqtSlot()
     def getResult(self):
@@ -185,6 +188,52 @@ class Worker(QtCore.QObject):
                 #print("Voltage at terminal %s is %f p.u." % (terminal , voltage))
             #print to PowerFactory output window
             print("Python Script ended.")
+
+                        #execute load flow
+
+
+            self.shc.Execute()
+            self.shc.iopt_mde=3 # for complete method
+
+
+            print("Collecting all calculation relevant terminals..")
+            terminals = self.app.GetCalcRelevantObjects("*.ElmTerm")
+            if not terminals:
+                raise Exception("No calculation relevant terminals found")
+            print("Number of terminals found: %d" % len(terminals))
+
+            terminals = self.app.GetCalcRelevantObjects("*.ElmTerm")
+
+            for terminal in terminals:
+                voltage = terminal.__getattr__("m.u")
+                self.result.append(voltage)
+                print("Voltage at terminal %s is %f p.u." % (terminal.cDisplayName , voltage))
+                #print("Voltage at terminal %s is %f p.u." % (terminal , voltage))
+            #print to PowerFactory output window
+            #print("Shc Python Script ended.")
+
+
+            print("Collecting all calculation relevant lines..")
+            lines = self.app.GetCalcRelevantObjects("*.ElmLne")
+            print(lines)
+
+            line = lines[0]
+            print(line.c.Ikss)
+
+            for line in lines:
+                print(dir(line))
+                amps = line.__getattr__("m:Ikss:bus1:A")
+                Z0 = line.__getattr__("Z0:bus1")
+                #amps = line.__getattr__()
+
+                print (amps)
+
+                #amps = 1.0
+                #self.result.append(voltage)
+                print("Amps in line %s is %f p.u.and %f" % (line.cDisplayName , amps, Z0))
+                #print("Voltage at terminal %s is %f p.u." % (terminal , voltage))
+            #print to PowerFactory output window
+            print("Shc Python Script ended.")
 
         except ValueError as err:
             print(err)
