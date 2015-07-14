@@ -7,12 +7,18 @@
 import sys
 import time
 import random
+import os
 
 #bling testing git in
 
-sys.path.append('C:\Program Files\DIgSILENT\PowerFactory 15.1\python')
+try:
+    os.environ["PATH"] = r'C:\Program Files\DIgSILENT\PowerFactory 15.2;'+ os.environ["PATH"]
+    sys.path.append("C:\\Program Files\\DIgSILENT\\PowerFactory 15.2\\python\\3.4")    
 
-import powerfactory as pf
+    import powerfactory as pf
+except ImportError as e:
+    print("Powerfactory not available - {0}".format(e))
+
 
 from PyQt4 import QtCore, QtGui
 from PyQt4.QtCore import pyqtSignal, pyqtSlot
@@ -81,8 +87,8 @@ class MainWindow(QtGui.QWidget):
         self.worker1 = Worker('In Thread1',self.edit, self.Digapp)
         self.worker2 = Worker('In Thread2',self.edit2, self.Digapp)
 
-        self.thread1 = QtCore.QThread()
-        self.thread2 = QtCore.QThread()
+        self.thread1 = QtCore.QThread(parent=self)
+        self.thread2 = QtCore.QThread(parent=self)
 
         self.worker1.moveToThread(self.thread1)
         self.worker2.moveToThread(self.thread2)
@@ -108,13 +114,15 @@ class MainWindow(QtGui.QWidget):
         self.connect(self.worker2, QtCore.SIGNAL('finished()'), self.thread2, QtCore.SLOT('quit()'))
         self.connect(self.worker2, QtCore.SIGNAL('finished()'), self.worker2, QtCore.SLOT('deleteLater()'))
         self.connect(self.thread2, QtCore.SIGNAL('finished()'), self.thread2, QtCore.SLOT('deleteLater()'))
+        
+        
 
         self.thread1.start()
 
 
         #self.thread2.start()
 
-        print('Thread One is running = '+str(self.thread1.isRunning()))
+        print('Thread One is running = ' +str(self.thread1.isRunning()))
         print('Thread Two is running = ' +str(self.thread2.isRunning()))
 
         ab=QtGui.QMessageBox()
@@ -160,7 +168,7 @@ class Worker(QtCore.QObject):
         self.ldf = self.app.GetFromStudyCase("ComLdf")
         self.shc = self.app.GetFromStudyCase("ComShc")
 
-        print('123')
+              
         
     #@pyqtSlot()
     def getResult(self):
@@ -172,9 +180,10 @@ class Worker(QtCore.QObject):
 
 
         try:
+            ######### Load flow study #####
+            
+            print('beginning load flow')  
             self.ldf.iopt_net = 0
-
-            #execute load flow
             self.ldf.Execute()
 
             print("Collecting all calculation relevant terminals..")
@@ -184,18 +193,20 @@ class Worker(QtCore.QObject):
             print("Number of terminals found: %d" % len(terminals))
 
             for terminal in terminals:
-                voltage = terminal.__getattr__("m.u")
+                voltage = terminal.__getattr__("m:u")
                 self.result.append(voltage)
                 print("Voltage at terminal %s is %f p.u." % (terminal.cDisplayName , voltage))
-                #print("Voltage at terminal %s is %f p.u." % (terminal , voltage))
-            #print to PowerFactory output window
-            print("Python Script ended.")
-
-                        #execute load flow
-
-
-            self.shc.Execute()
+                
+        except Exception as e:
+            print('Load flow errors {}'.format(e))
+            
+        print('beginning fault study')
+                  
+        try:
+                
+            ################# Fault Study ###################
             self.shc.iopt_mde=3 # for complete method
+            self.shc.Execute()
 
 
             print("Collecting all calculation relevant terminals..")
@@ -207,41 +218,24 @@ class Worker(QtCore.QObject):
             terminals = self.app.GetCalcRelevantObjects("*.ElmTerm")
 
             for terminal in terminals:
-                voltage = terminal.__getattr__("m.u")
-                self.result.append(voltage)
+                voltage = terminal.__getattr__("m:U1")
+                self.result2.append(voltage)
                 print("Voltage at terminal %s is %f p.u." % (terminal.cDisplayName , voltage))
-                #print("Voltage at terminal %s is %f p.u." % (terminal , voltage))
-            #print to PowerFactory output window
-            #print("Shc Python Script ended.")
+
 
 
             print("Collecting all calculation relevant lines..")
             lines = self.app.GetCalcRelevantObjects("*.ElmLne")
-            #print(lines
-
-            #line = lines[0]
-            #print(line.c.Ikss)
 
             for line in lines:
-                #print(dir(line))
                 amps = line.__getattr__("m:Ikss:bus1:A")
                 Z0 = line.__getattr__("m:Z0:bus1")
-                #amps = line.__getattr__()
-
-                #print (amps)
-
-                #amps = 1.0
-                #self.result.append(voltage)
                 print("Amps in line %s is %f p.u.and %f" % (line.cDisplayName , amps, Z0))
-                #print("Voltage at terminal %s is %f p.u." % (terminal , voltage))
-            #print to PowerFactory output window
-            print("Shc Python Script ended.")
-
-        except ValueError as err:
-            print(err)
 
 
-            
+        except Exception as err:
+            print("Fault study error is {}".format(err))
+
         self.resultReady.emit()
 
     @pyqtSlot()
